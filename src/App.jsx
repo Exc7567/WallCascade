@@ -24,19 +24,26 @@ import { Check, X, Shield, Smartphone, Monitor, Trash2, Gift, Snowflake, Star } 
 
 const firebaseConfig = {
   apiKey: "AIzaSyCAa6CLaTL2egvtsymwuoQ66ONQbtrxn_0",
+
   authDomain: "newyearwall-21c4d.firebaseapp.com",
+
   projectId: "newyearwall-21c4d",
+
   storageBucket: "newyearwall-21c4d.firebasestorage.app",
+
   messagingSenderId: "506412116766",
+
   appId: "1:506412116766:web:a305c6faa5748c986ef70f"
+
 };
+
 
 
 // --- INITIALIZE FIREBASE ---
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = "christmas-wall-final"; 
+const appId = "christmas-wall-sketch-layout"; 
 
 // --- STYLES & ANIMATIONS ---
 const styles = `
@@ -46,19 +53,22 @@ const styles = `
     100% { transform: translateY(100vh); opacity: 0.3; }
   }
   
-  /* THE FALLING ANIMATION */
-  @keyframes fallFromSky {
+  /* HEAVY FALL ANIMATION */
+  @keyframes dropFromSpace {
     0% { 
       opacity: 0; 
-      transform: translateY(-200px) scale(0.8); /* Start above screen */
+      transform: translateY(-120vh) rotate(-5deg); /* Start way above screen */
     }
     60% {
       opacity: 1;
-      transform: translateY(20px) scale(1.02); /* Overshoot slightly (bounce) */
+      transform: translateY(20px) rotate(2deg); /* Crash down past target */
+    }
+    80% {
+      transform: translateY(-10px) rotate(-1deg); /* Bounce up */
     }
     100% { 
       opacity: 1; 
-      transform: translateY(0) scale(1); /* Land */
+      transform: translateY(0) rotate(0deg); /* Land */
     }
   }
 
@@ -69,8 +79,19 @@ const styles = `
     animation: snow linear infinite;
   }
   
-  .message-card {
-    animation: fallFromSky 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  .falling-message {
+    /* Ensure opacity starts at 0 so we don't see it before it falls */
+    opacity: 0; 
+    animation: dropFromSpace 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* Custom Scrollbar to hide it but keep functionality */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 `;
 
@@ -81,7 +102,6 @@ export default function App() {
 
   useEffect(() => {
     const initAuth = async () => {
-      // Connect to Firebase anonymously
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
         // @ts-ignore
         await import('firebase/auth').then(({ signInWithCustomToken }) => 
@@ -93,7 +113,6 @@ export default function App() {
     };
     initAuth();
     
-    // Check URL for ?mode=guest to auto-route scanners
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === 'guest') setView('guest');
 
@@ -138,9 +157,8 @@ function LandingView({ onSelect }) {
       <h1 className="text-5xl font-bold mb-4 text-center text-yellow-400 drop-shadow-[0_2px_10px_rgba(255,215,0,0.5)]" style={{ fontFamily: 'serif' }}>
         Christmas Wish Wall
       </h1>
-      <p className="text-red-200 mb-12 text-center text-lg">Select your interface</p>
       
-      <div className="grid gap-6 w-full max-w-md z-10">
+      <div className="grid gap-6 w-full max-w-md z-10 mt-12">
         <MenuButton icon={<Smartphone />} title="Guest Mode" desc="Scan QR to open this" color="bg-green-600" onClick={() => onSelect('guest')} />
         <MenuButton icon={<Monitor />} title="Wall Mode" desc="The Giant Display" color="bg-red-600" onClick={() => onSelect('wall')} />
         <MenuButton icon={<Shield />} title="Admin Mode" desc="Moderator Dashboard" color="bg-slate-600" onClick={() => onSelect('admin')} />
@@ -161,7 +179,7 @@ function MenuButton({ icon, title, desc, color, onClick }) {
   );
 }
 
-// --- 2. GUEST VIEW (Phone - NO NAME FIELD) ---
+// --- 2. GUEST VIEW ---
 function GuestView({ onBack }) {
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('idle');
@@ -188,21 +206,17 @@ function GuestView({ onBack }) {
   return (
     <div className="min-h-screen bg-red-950 text-white p-6 flex flex-col relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-500 via-red-900 to-black pointer-events-none" />
-      
       <button onClick={onBack} className="self-start text-sm text-red-300 mb-6 z-10 flex items-center gap-1">← Back</button>
-      
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col justify-center z-10">
         <div className="text-center mb-8">
           <Gift className="w-16 h-16 mx-auto text-yellow-400 mb-4 animate-bounce" />
           <h2 className="text-3xl font-bold text-yellow-100" style={{ fontFamily: 'serif' }}>Send a Wish</h2>
-          <p className="text-red-200">Your message will appear on the big screen!</p>
         </div>
-
         {status === 'success' ? (
           <div className="bg-green-800/80 border border-green-500 p-8 rounded-2xl text-center backdrop-blur-md animate-pulse">
             <Check size={48} className="mx-auto text-green-300 mb-4" />
             <h3 className="text-2xl font-bold text-green-100">Sent to Santa!</h3>
-            <p className="text-green-200 mt-2">Look for it on the big screen!</p>
+            <p className="text-green-200 mt-2">Look up at the screen!</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -210,7 +224,7 @@ function GuestView({ onBack }) {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               className="w-full bg-black/40 border border-red-500/30 rounded-xl p-6 h-48 text-white placeholder-red-300/50 focus:ring-2 focus:ring-yellow-400 focus:outline-none transition-all resize-none text-2xl font-serif text-center leading-relaxed"
-              placeholder="Type your wish here..."
+              placeholder="Type your wish..."
               required
             />
             <button
@@ -226,7 +240,7 @@ function GuestView({ onBack }) {
   );
 }
 
-// --- 3. WALL VIEW (FALLING TEXT + ILLUSTRATION LAYOUT) ---
+// --- 3. WALL VIEW (SKETCH MATCHING LAYOUT) ---
 function WallView({ onBack }) {
   const [messages, setMessages] = useState([]);
   const guestUrl = window.location.href.split('?')[0] + '?mode=guest';
@@ -238,48 +252,47 @@ function WallView({ onBack }) {
       const msgs = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter(m => m.status === 'approved')
-        .sort((a, b) => b.createdAt - a.createdAt); // Newest first
+        .sort((a, b) => b.createdAt - a.createdAt);
       setMessages(msgs);
     }, (error) => console.error(error));
     return () => unsubscribe();
   }, []);
 
-  // Logic to determine font size AND box width based on text length
-  const getCardStyle = (text) => {
-    const len = text.length;
-    if (len < 20) {
-      // Short text: Huge font, wide box
-      return { 
-        textSize: 'text-5xl md:text-7xl font-black leading-none tracking-tight', 
-        width: 'md:col-span-2', // Takes up 2 slots width
-        bg: 'bg-gradient-to-br from-red-600 to-red-900 border-red-400'
-      };
-    } else if (len < 60) {
-      // Medium text: Big font, normal box
-      return { 
-        textSize: 'text-3xl md:text-4xl font-bold leading-tight', 
-        width: 'md:col-span-1',
-        bg: 'bg-gradient-to-br from-green-700 to-green-900 border-green-500'
-      };
-    } else {
-      // Long text: Normal font, wide box to fit it
-      return { 
-        textSize: 'text-xl md:text-2xl font-medium leading-normal', 
-        width: 'md:col-span-2',
-        bg: 'bg-gradient-to-br from-slate-800 to-black border-yellow-600/50'
-      };
-    }
+  // Use a pseudo-random generator based on string char codes to make layout consistent but look random
+  const getRandomStyle = (id, textLength) => {
+    const seed = id.charCodeAt(0) + id.charCodeAt(id.length - 1);
+    
+    // Width Variation
+    let widthClass = 'w-full'; 
+    if (textLength < 15) widthClass = 'w-[45%]'; // Short text = small box
+    else if (textLength > 50) widthClass = 'w-full'; // Long text = full width box
+    else widthClass = seed % 2 === 0 ? 'w-[55%]' : 'w-[40%]'; // Medium = Random
+    
+    // Background Variation
+    const colors = [
+      'bg-red-800/90 border-red-500',
+      'bg-green-800/90 border-green-500', 
+      'bg-slate-800/90 border-yellow-500'
+    ];
+    const bgClass = colors[seed % 3];
+
+    // Margin offsets to create the "Scattered" look (not a grid)
+    const marginClass = seed % 5 === 0 ? 'mt-8' : (seed % 3 === 0 ? 'mt-0' : 'mt-4');
+    
+    // Font Size
+    const fontClass = textLength < 20 ? 'text-4xl md:text-5xl font-bold' : 'text-xl md:text-2xl';
+
+    return { widthClass, bgClass, marginClass, fontClass };
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-red-950 font-sans flex">
-      {/* Backgrounds */}
+    <div className="relative h-screen overflow-hidden bg-red-950 font-sans flex flex-row">
+      {/* Background */}
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1576692139035-773a726759c8?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-30 blur-sm"></div>
-      <div className="absolute inset-0 bg-gradient-to-r from-red-950/90 via-red-900/60 to-red-950/90"></div>
       
       {/* Snowfall */}
       <div className="absolute inset-0 pointer-events-none z-0">
-        {[...Array(40)].map((_, i) => (
+        {[...Array(50)].map((_, i) => (
           <div key={i} className="snowflake" style={{
             left: `${Math.random() * 100}%`,
             animationDuration: `${5 + Math.random() * 10}s`,
@@ -289,60 +302,62 @@ function WallView({ onBack }) {
         ))}
       </div>
 
-      {/* LEFT PANEL: 30% Width (Matches your illustration) */}
-      <div className="relative z-10 w-[30%] h-screen flex flex-col justify-start items-center p-8 border-r border-white/10 bg-black/30 backdrop-blur-md shadow-2xl pt-20">
-        {/* QR Code Box at Top */}
-        <div className="mb-10 p-3 bg-white rounded-3xl shadow-[0_0_60px_rgba(255,255,0,0.2)] transform hover:scale-105 transition-transform duration-500">
-           <img src={qrUrl} alt="Scan QR" className="w-56 h-56 object-contain" />
-        </div>
+      {/* --- LEFT SIDEBAR (25%) Matches Sketch --- */}
+      <div className="relative z-10 w-[25%] h-full bg-black/40 backdrop-blur-md border-r-2 border-yellow-500/30 flex flex-col pt-12 px-6 shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
+         {/* QR Code Container (Square Box) */}
+         <div className="w-full aspect-square bg-white p-4 rounded-xl shadow-2xl mb-8 transform hover:scale-105 transition-transform">
+            <img src={qrUrl} alt="Scan QR" className="w-full h-full object-contain" />
+         </div>
 
-        {/* Text Below QR */}
-        <div className="text-center space-y-6">
-          <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-sm leading-tight" style={{ fontFamily: 'serif' }}>
-            SCAN<br/>ME
-          </h1>
-          <div className="w-16 h-1 bg-yellow-500 mx-auto rounded-full"></div>
-          <p className="text-green-100 text-lg font-light leading-relaxed px-4">
-            Open your camera<br/>
-            Scan the code<br/>
-            <span className="text-yellow-400 font-bold">Write a wish!</span>
-          </p>
-        </div>
-        
-        <button onClick={onBack} className="absolute bottom-4 left-4 text-white/30 text-xs hover:text-white">Exit</button>
+         {/* Text Below */}
+         <div className="text-center">
+            <h1 className="text-5xl font-serif text-yellow-400 mb-4 drop-shadow-md">SCAN<br/>ME</h1>
+            <div className="w-full h-px bg-white/30 my-6"></div>
+            <div className="space-y-2 text-green-100 font-light text-lg">
+              <p>1. Open Camera</p>
+              <p>2. Scan Code</p>
+              <p className="font-bold text-yellow-300 animate-pulse">3. Make a Wish!</p>
+            </div>
+         </div>
+         
+         <button onClick={onBack} className="mt-auto mb-4 text-white/20 text-xs">Exit</button>
       </div>
 
-      {/* RIGHT PANEL: 70% Width (The "Wall") */}
-      <div className="relative z-10 w-[70%] h-screen overflow-hidden p-8">
-        {/* Using CSS Grid for the "Masonry" Look in your sketch */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 content-start pb-32 pr-2 custom-scrollbar overflow-y-auto h-full">
+      {/* --- RIGHT CONTENT (75%) "Scattered Wall" --- */}
+      <div className="relative z-10 w-[75%] h-full p-8 overflow-y-hidden">
+        {/* Container with Flex Wrap + Random Margins to break the grid look */}
+        <div className="w-full h-full flex flex-wrap content-start gap-4 overflow-y-auto pb-40 no-scrollbar pr-4">
+          
           {messages.length === 0 ? (
-            <div className="col-span-2 mt-40 text-center text-white/30 text-3xl font-serif italic">
-              Waiting for the first wish to fall from the sky...
+            <div className="w-full mt-40 text-center text-white/30 text-4xl font-serif italic">
+              Waiting for wishes to fall from the sky...
             </div>
           ) : (
             messages.map((msg, idx) => {
-              const style = getCardStyle(msg.text);
+              const style = getRandomStyle(msg.id, msg.text.length);
+              
               return (
                 <div 
                   key={msg.id} 
                   className={`
-                    message-card relative rounded-3xl p-8 border shadow-2xl
-                    flex items-center justify-center text-center
-                    ${style.width} ${style.bg}
+                    falling-message
+                    relative p-6 rounded-2xl border shadow-xl flex items-center justify-center text-center
+                    min-h-[120px] 
+                    ${style.widthClass} 
+                    ${style.bgClass}
+                    ${style.marginClass}
                   `}
                   style={{ 
-                    // Stagger animation slightly for natural feel
-                    animationDelay: `${idx < 5 ? idx * 0.15 : 0}s` 
+                    // Stagger animation so they don't all drop at once on load
+                    animationDelay: `${idx < 10 ? idx * 0.2 : 0}s` 
                   }}
                 >
-                  {/* Decorative Icon */}
-                  <div className="absolute -top-3 -right-3 bg-white text-red-600 rounded-full p-2 shadow-lg">
-                    {idx % 2 === 0 ? <Gift size={20} /> : <Snowflake size={20} />}
+                  {/* Icon Badge */}
+                  <div className="absolute -top-3 -right-3 bg-white text-red-700 rounded-full p-2 shadow-sm">
+                    {idx % 2 === 0 ? <Gift size={18} /> : <Snowflake size={18} />}
                   </div>
 
-                  {/* THE MESSAGE TEXT (Inside the box) */}
-                  <p className={`text-white font-serif ${style.textSize}`}>
+                  <p className={`text-white font-serif leading-tight ${style.fontClass}`}>
                     "{msg.text}"
                   </p>
                 </div>

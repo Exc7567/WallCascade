@@ -32,13 +32,11 @@ const firebaseConfig = {
 };
 
 
-
 // --- INITIALIZE FIREBASE ---
-// (Ensure this runs only if config is valid to prevent crashes in preview if keys missing)
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = "christmas-wall-v2"; 
+const appId = "christmas-wall-final"; 
 
 // --- STYLES & ANIMATIONS ---
 const styles = `
@@ -48,19 +46,19 @@ const styles = `
     100% { transform: translateY(100vh); opacity: 0.3; }
   }
   
-  /* The Falling Animation */
-  @keyframes dropIn {
+  /* THE FALLING ANIMATION */
+  @keyframes fallFromSky {
     0% { 
-      transform: translateY(-100vh) scale(0.5); /* Starts way above screen */
       opacity: 0; 
+      transform: translateY(-200px) scale(0.8); /* Start above screen */
     }
-    70% {
-      transform: translateY(20px) scale(1.05); /* Bounces slightly */
+    60% {
       opacity: 1;
+      transform: translateY(20px) scale(1.02); /* Overshoot slightly (bounce) */
     }
     100% { 
-      transform: translateY(0) scale(1); /* Lands */
       opacity: 1; 
+      transform: translateY(0) scale(1); /* Land */
     }
   }
 
@@ -71,8 +69,8 @@ const styles = `
     animation: snow linear infinite;
   }
   
-  .message-drop {
-    animation: dropIn 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  .message-card {
+    animation: fallFromSky 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   }
 `;
 
@@ -83,7 +81,7 @@ export default function App() {
 
   useEffect(() => {
     const initAuth = async () => {
-      // Priority: Custom Token (Chat Preview) -> Anonymous (Real App)
+      // Connect to Firebase anonymously
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
         // @ts-ignore
         await import('firebase/auth').then(({ signInWithCustomToken }) => 
@@ -95,6 +93,7 @@ export default function App() {
     };
     initAuth();
     
+    // Check URL for ?mode=guest to auto-route scanners
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === 'guest') setView('guest');
 
@@ -162,7 +161,7 @@ function MenuButton({ icon, title, desc, color, onClick }) {
   );
 }
 
-// --- 2. GUEST VIEW (Input - NO NAME FIELD) ---
+// --- 2. GUEST VIEW (Phone - NO NAME FIELD) ---
 function GuestView({ onBack }) {
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('idle');
@@ -196,7 +195,7 @@ function GuestView({ onBack }) {
         <div className="text-center mb-8">
           <Gift className="w-16 h-16 mx-auto text-yellow-400 mb-4 animate-bounce" />
           <h2 className="text-3xl font-bold text-yellow-100" style={{ fontFamily: 'serif' }}>Send a Wish</h2>
-          <p className="text-red-200">Your message will appear on the screen!</p>
+          <p className="text-red-200">Your message will appear on the big screen!</p>
         </div>
 
         {status === 'success' ? (
@@ -227,7 +226,7 @@ function GuestView({ onBack }) {
   );
 }
 
-// --- 3. WALL VIEW (FALLING TEXT & DYNAMIC SIZE) ---
+// --- 3. WALL VIEW (FALLING TEXT + ILLUSTRATION LAYOUT) ---
 function WallView({ onBack }) {
   const [messages, setMessages] = useState([]);
   const guestUrl = window.location.href.split('?')[0] + '?mode=guest';
@@ -245,11 +244,31 @@ function WallView({ onBack }) {
     return () => unsubscribe();
   }, []);
 
-  // Helper function to adjust text size
-  const getTextSize = (length) => {
-    if (length < 20) return 'text-5xl md:text-6xl leading-tight'; // Huge for short msg
-    if (length < 60) return 'text-3xl md:text-4xl leading-snug';  // Big for medium
-    return 'text-xl md:text-2xl leading-normal';                  // Normal for long
+  // Logic to determine font size AND box width based on text length
+  const getCardStyle = (text) => {
+    const len = text.length;
+    if (len < 20) {
+      // Short text: Huge font, wide box
+      return { 
+        textSize: 'text-5xl md:text-7xl font-black leading-none tracking-tight', 
+        width: 'md:col-span-2', // Takes up 2 slots width
+        bg: 'bg-gradient-to-br from-red-600 to-red-900 border-red-400'
+      };
+    } else if (len < 60) {
+      // Medium text: Big font, normal box
+      return { 
+        textSize: 'text-3xl md:text-4xl font-bold leading-tight', 
+        width: 'md:col-span-1',
+        bg: 'bg-gradient-to-br from-green-700 to-green-900 border-green-500'
+      };
+    } else {
+      // Long text: Normal font, wide box to fit it
+      return { 
+        textSize: 'text-xl md:text-2xl font-medium leading-normal', 
+        width: 'md:col-span-2',
+        bg: 'bg-gradient-to-br from-slate-800 to-black border-yellow-600/50'
+      };
+    }
   };
 
   return (
@@ -270,64 +289,60 @@ function WallView({ onBack }) {
         ))}
       </div>
 
-      {/* LEFT PANEL (Static Info) */}
-      <div className="relative z-10 w-[30%] h-screen flex flex-col justify-center items-center p-8 border-r border-white/10 bg-black/20 backdrop-blur-md shadow-2xl">
-        <div className="mb-8 p-2 bg-gradient-to-tr from-yellow-400 via-red-500 to-green-500 rounded-2xl shadow-[0_0_50px_rgba(255,215,0,0.3)] animate-pulse">
-          <div className="bg-white p-2 rounded-xl">
-             <img src={qrUrl} alt="Scan QR" className="w-56 h-56 object-contain" />
-          </div>
+      {/* LEFT PANEL: 30% Width (Matches your illustration) */}
+      <div className="relative z-10 w-[30%] h-screen flex flex-col justify-start items-center p-8 border-r border-white/10 bg-black/30 backdrop-blur-md shadow-2xl pt-20">
+        {/* QR Code Box at Top */}
+        <div className="mb-10 p-3 bg-white rounded-3xl shadow-[0_0_60px_rgba(255,255,0,0.2)] transform hover:scale-105 transition-transform duration-500">
+           <img src={qrUrl} alt="Scan QR" className="w-56 h-56 object-contain" />
         </div>
-        <h1 className="text-5xl text-center font-bold text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-yellow-600 drop-shadow-sm mb-4" style={{ fontFamily: 'serif' }}>
-          Merry<br/>Christmas
-        </h1>
-        <div className="bg-green-900/80 border border-green-500/50 p-6 rounded-2xl max-w-sm text-center">
-          <Star className="w-8 h-8 text-yellow-400 mx-auto mb-2 animate-[sparkle_2s_infinite]" />
-          <h3 className="text-xl font-bold text-green-100">Scan & Send</h3>
+
+        {/* Text Below QR */}
+        <div className="text-center space-y-6">
+          <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-sm leading-tight" style={{ fontFamily: 'serif' }}>
+            SCAN<br/>ME
+          </h1>
+          <div className="w-16 h-1 bg-yellow-500 mx-auto rounded-full"></div>
+          <p className="text-green-100 text-lg font-light leading-relaxed px-4">
+            Open your camera<br/>
+            Scan the code<br/>
+            <span className="text-yellow-400 font-bold">Write a wish!</span>
+          </p>
         </div>
+        
         <button onClick={onBack} className="absolute bottom-4 left-4 text-white/30 text-xs hover:text-white">Exit</button>
       </div>
 
-      {/* RIGHT PANEL (Falling Messages) */}
+      {/* RIGHT PANEL: 70% Width (The "Wall") */}
       <div className="relative z-10 w-[70%] h-screen overflow-hidden p-8">
-        {/* We use flex-col-reverse so NEW messages appear at the visual TOP (start of list) 
-            but in code they are 'first' in the map. The map order is Newest->Oldest.
-        */}
-        <div className="flex flex-wrap content-start gap-6 h-full overflow-y-auto pb-32 pr-4 custom-scrollbar">
+        {/* Using CSS Grid for the "Masonry" Look in your sketch */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 content-start pb-32 pr-2 custom-scrollbar overflow-y-auto h-full">
           {messages.length === 0 ? (
-            <div className="w-full mt-20 text-center text-white/30 text-3xl font-serif italic">
-              Santa is waiting for wishes...
+            <div className="col-span-2 mt-40 text-center text-white/30 text-3xl font-serif italic">
+              Waiting for the first wish to fall from the sky...
             </div>
           ) : (
             messages.map((msg, idx) => {
-              const rotation = (idx % 2 === 0 ? 1 : -1) * (Math.random() * 2);
-              // Cycling colors for Christmas Theme
-              const colors = [
-                'bg-red-800/80 border-red-500 shadow-red-900/50', 
-                'bg-green-800/80 border-green-500 shadow-green-900/50', 
-                'bg-slate-900/80 border-yellow-600 shadow-yellow-900/50'
-              ];
-              const colorClass = colors[idx % colors.length];
-
+              const style = getCardStyle(msg.text);
               return (
                 <div 
                   key={msg.id} 
                   className={`
-                    message-drop relative rounded-3xl p-8 border backdrop-blur-md shadow-2xl w-full
-                    ${colorClass}
+                    message-card relative rounded-3xl p-8 border shadow-2xl
                     flex items-center justify-center text-center
+                    ${style.width} ${style.bg}
                   `}
                   style={{ 
-                    transform: `rotate(${rotation}deg)`,
-                    // Stagger the animation so they don't all fall at once on load
-                    animationDelay: `${idx < 5 ? idx * 0.2 : 0}s` 
+                    // Stagger animation slightly for natural feel
+                    animationDelay: `${idx < 5 ? idx * 0.15 : 0}s` 
                   }}
                 >
-                  <div className="absolute -top-4 -left-4 bg-white text-red-600 rounded-full p-3 shadow-lg">
-                    {idx % 2 === 0 ? <Gift size={28} /> : <Snowflake size={28} />}
+                  {/* Decorative Icon */}
+                  <div className="absolute -top-3 -right-3 bg-white text-red-600 rounded-full p-2 shadow-lg">
+                    {idx % 2 === 0 ? <Gift size={20} /> : <Snowflake size={20} />}
                   </div>
 
-                  {/* DYNAMIC FONT SIZE HERE */}
-                  <p className={`text-white font-serif ${getTextSize(msg.text.length)}`}>
+                  {/* THE MESSAGE TEXT (Inside the box) */}
+                  <p className={`text-white font-serif ${style.textSize}`}>
                     "{msg.text}"
                   </p>
                 </div>

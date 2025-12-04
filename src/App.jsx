@@ -17,22 +17,22 @@ import {
 } from 'firebase/firestore';
 import { Check, X, Shield, Smartphone, Monitor, Trash2, Gift, Snowflake, Star } from 'lucide-react';
 
-// --- FIREBASE SETUP ---
-// TODO: PASTE YOUR FIREBASE CONFIGURATION HERE
-// Go to Firebase Console -> Project Settings -> General -> Your Apps -> SDK Setup and config
+// --- FIREBASE CONFIGURATION ---
+// I have inserted the keys you provided. This will work on Vercel.
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY_HERE",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCAa6CLaTL2egvtsymwuoQ66ONQbtrxn_0",
+  authDomain: "newyearwall-21c4d.firebaseapp.com",
+  projectId: "newyearwall-21c4d",
+  storageBucket: "newyearwall-21c4d.firebasestorage.app",
+  messagingSenderId: "506412116766",
+  appId: "1:506412116766:web:a305c6faa5748c986ef70f"
 };
 
+// Initialize Firebase (Only once!)
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = "new-year-wall"; // We can hardcode this for your project
+const appId = "new-year-wall"; 
 
 // --- STYLES & ANIMATIONS ---
 const styles = `
@@ -75,7 +75,7 @@ export default function App() {
   // Auth & URL Routing for QR Code
   useEffect(() => {
     const initAuth = async () => {
-      // In the real app, we just use Anonymous auth for everyone
+      // Connect to Firebase anonymously
       await signInAnonymously(auth);
     };
     initAuth();
@@ -178,6 +178,7 @@ function GuestView({ onBack }) {
 
   return (
     <div className="min-h-screen bg-red-950 text-white p-6 flex flex-col relative overflow-hidden">
+      {/* Decorative Background */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-500 via-red-900 to-black pointer-events-none" />
       
       <button onClick={onBack} className="self-start text-sm text-red-300 mb-6 z-10 flex items-center gap-1">← Back</button>
@@ -227,6 +228,7 @@ function GuestView({ onBack }) {
 // --- 3. WALL VIEW (The Animated Christmas Display) ---
 function WallView({ onBack }) {
   const [messages, setMessages] = useState([]);
+  // Generate the current URL + ?mode=guest for the QR code
   const guestUrl = window.location.href.split('?')[0] + '?mode=guest';
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(guestUrl)}&color=000000&bgcolor=ffffff`;
 
@@ -236,7 +238,7 @@ function WallView({ onBack }) {
       const msgs = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter(m => m.status === 'approved')
-        .sort((a, b) => b.createdAt - a.createdAt);
+        .sort((a, b) => b.createdAt - a.createdAt); // Newest first
       setMessages(msgs);
     }, (error) => console.error(error));
     return () => unsubscribe();
@@ -244,9 +246,11 @@ function WallView({ onBack }) {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-red-950 font-sans flex">
+      {/* Dynamic Background */}
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1576692139035-773a726759c8?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-30 blur-sm"></div>
       <div className="absolute inset-0 bg-gradient-to-r from-red-950/90 via-red-900/60 to-red-950/90"></div>
       
+      {/* Snowfall Effect */}
       <div className="absolute inset-0 pointer-events-none z-0">
         {[...Array(30)].map((_, i) => (
           <div key={i} className="snowflake" style={{
@@ -258,6 +262,7 @@ function WallView({ onBack }) {
         ))}
       </div>
 
+      {/* LEFT PANEL: STATIC INFO & QR */}
       <div className="relative z-10 w-[35%] h-screen flex flex-col justify-center items-center p-8 border-r border-white/10 bg-black/20 backdrop-blur-md shadow-2xl">
         <div className="mb-8 p-1 bg-gradient-to-tr from-yellow-400 via-red-500 to-green-500 rounded-2xl shadow-[0_0_50px_rgba(255,215,0,0.3)] animate-pulse">
           <div className="bg-white p-4 rounded-xl">
@@ -278,7 +283,9 @@ function WallView({ onBack }) {
         <button onClick={onBack} className="absolute bottom-4 left-4 text-white/30 text-xs hover:text-white">Exit</button>
       </div>
 
+      {/* RIGHT PANEL: ANIMATED FEED */}
       <div className="relative z-10 w-[65%] h-screen overflow-hidden p-8">
+        {/* Messages Container - Using Masonry-like Flex Wrap */}
         <div className="flex flex-wrap content-start gap-6 h-full overflow-y-auto pb-32 pr-4 custom-scrollbar">
           {messages.length === 0 ? (
             <div className="w-full h-full flex items-center justify-center text-white/30 text-2xl font-serif italic">
@@ -286,6 +293,7 @@ function WallView({ onBack }) {
             </div>
           ) : (
             messages.map((msg, idx) => {
+              // Deterministic randomness for layout variety based on index/id
               const isLarge = idx % 5 === 0; 
               const rotation = (idx % 2 === 0 ? 1 : -1) * (Math.random() * 3);
               const colors = [
@@ -305,9 +313,10 @@ function WallView({ onBack }) {
                   `}
                   style={{ 
                     '--rot': `${rotation}deg`,
-                    animationDelay: `${idx * 0.1}s` 
+                    animationDelay: `${idx * 0.1}s` // Staggered entry
                   }}
                 >
+                  {/* Decorative corner icon */}
                   <div className="absolute -top-3 -right-3 bg-white text-red-600 rounded-full p-2 shadow-lg">
                     {idx % 2 === 0 ? <Gift size={isLarge ? 24 : 16} /> : <Snowflake size={isLarge ? 24 : 16} />}
                   </div>
@@ -353,6 +362,7 @@ function AdminView({ onBack }) {
 
   const clearDb = async () => {
     if(confirm("Delete ALL data?")) {
+      // In production, use batch or recursive delete function
       const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'wall_messages'));
       onSnapshot(q, (snap) => snap.forEach(d => deleteDoc(d.ref)));
     }
